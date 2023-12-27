@@ -4,6 +4,7 @@ use std::fs;
 use std::collections::HashSet;
 use std::collections::HashMap;
 use clap::Parser;
+use regex::Regex;
 
 #[derive(Parser)]
 struct Cli {
@@ -13,8 +14,8 @@ struct Cli {
     #[arg(short, long, num_args(0..))]
     appdir: Vec<String>,
 
-    #[arg(short, long)]
-    filter: Option<String>
+    #[arg(short, long, num_args(0..))]
+    filter: Vec<String>,
 }
 
 fn parse_desktop_file(path: &str) -> Result<HashMap<String, String>, &'static str> {
@@ -123,32 +124,41 @@ fn main() {
     }
 
     let entries = list_desktop_entries(desktop_file_dirs);
-    let mut filter: Option<(String, String)> = None;
+    let mut parsed_filters: Vec<(String, Regex)> = Vec::new();
 
-    match &cli.filter {
-        Some(f) => {
-            let parts: Vec<&str> = f.split(",").collect();
+    for filter in &cli.filter {
+        let parts: Vec<&str> = filter.split(",").collect();
 
-            if parts.len() != 2 {
-                eprintln!("Ill-formated filter: {}", f);
-                
-                return ;
-            }
-            
-            filter = Some((parts[0].to_string(), parts[1].to_string()));
+        if parts.len() != 2 {
+            eprintln!("Ill-formated filter: {}", filter);
+
+            return 
         }
-        None => {}
+
+        let rex = Regex::new(parts[1]);
+
+        if rex.is_err() {
+            eprintln!("Invalid regular expression: {}", parts[1]);
+
+            return
+        }
+
+        parsed_filters.push((parts[0].to_lowercase(), rex.unwrap()));
     }
     
     for entry in entries {
-        let is_filtered: bool = match &filter {
-            Some((fk, fv)) => {
-                let val = entry.get(&fk.to_lowercase());
+        let mut is_filtered = true;
 
-                val.is_some() && val.unwrap() == fv
-            },
-            None => true
-        };
+        for (k, rex) in &parsed_filters {
+            let v = entry.get(k);
+            
+            if v.is_none() {
+                is_filtered = false;
+                break ;
+            }
+
+            is_filtered = rex.is_match(v.unwrap());
+        }
 
         if !is_filtered {
             continue ;

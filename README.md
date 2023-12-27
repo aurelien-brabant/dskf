@@ -30,6 +30,13 @@ dskf --select Exec
 
 dskf --filter name,'Mozilla Thunderbird' --select exec
 
+# Print the name of desktop files that also have an exec field.
+# Regular expression are supported as a filter, that's what we use here.
+dskf --filter 'exec,.*' --select name
+
+# Multiple filters can be specified at the same time
+dskf --filter 'exec,.*' --filter 'name,.*Mozilla.*'
+
 # Add additional application directories
 dskf --appdir $HOME/applications --appdir $HOME/.custom/applications
 
