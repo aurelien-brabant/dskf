@@ -1,0 +1,8 @@
+[package]
+name = "dskf"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rust-ini = "0.20.0"
+clap = { version = "4.0", features = ["derive"] }
